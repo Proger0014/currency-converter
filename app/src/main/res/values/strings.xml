@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Конвертер Валют</string>
+
+    <string name="currency_from_text">От</string>
+    <string name="currency_to_text">В</string>
+
+    <string name="currency_option_ruble_text">Рубль</string>
+    <string name="currency_option_dollar_text">Доллар</string>
+    <string name="currency_option_euro_text">Евро</string>
+    <string name="currency_option_yen_text">Йен</string>
+
+    <string name="currency_to_convert_text">Деньги для перевода</string>
+    <string name="currency_to_convert_button_text">Перевести</string>
+
+    <string name="currency_result_text">Количество: %s</string>
+    <string name="currency_round_up_text">Округлить</string>
+</resources>

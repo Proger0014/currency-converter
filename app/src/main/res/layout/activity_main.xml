@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="15dp"
+        tools:context=".MainActivity">
+
+        <TextView
+            android:id="@+id/currency_from"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/currency_from_text"
+            android:textAlignment="center"
+            app:layout_constraintEnd_toEndOf="@id/currency_from_options"
+            app:layout_constraintStart_toStartOf="@id/currency_from_options"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <RadioGroup
+            android:id="@+id/currency_from_options"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkedButton="@id/currency_from_option_ruble"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/currency_from">
+
+            <RadioButton
+                android:id="@+id/currency_from_option_ruble"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/currency_option_ruble_text" />
+
+            <RadioButton
+                android:id="@+id/currency_from_option_dollar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/currency_option_dollar_text" />
+
+            <RadioButton
+                android:id="@+id/currency_from_option_euro"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/currency_option_euro_text" />
+
+            <RadioButton
+                android:id="@+id/currency_from_option_yen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/currency_option_yen_text" />
+        </RadioGroup>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/currency_to_convert"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/currency_from_options"
+            android:hint="@string/currency_to_convert_text">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal"
+                android:importantForAutofill="no" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+            android:id="@+id/currency_to_convert_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="100dp"
+            android:text="@string/currency_to_convert_button_text"
+            android:textSize="16sp"
+            app:icon="@drawable/ic_payments"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/currency_result" />
+
+        <TextView
+            android:id="@+id/currency_to"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/currency_to_text"
+            android:textAlignment="center"
+            app:layout_constraintEnd_toEndOf="@id/currency_to_options"
+            app:layout_constraintStart_toStartOf="@id/currency_to_options"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <RadioGroup
+            android:id="@+id/currency_to_options"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkedButton="@id/currency_to_option_dollar"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/currency_to">
+
+            <RadioButton
+                android:id="@+id/currency_to_option_ruble"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/currency_option_ruble_text" />
+
+            <RadioButton
+                android:id="@+id/currency_to_option_dollar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/currency_option_dollar_text" />
+
+            <RadioButton
+                android:id="@+id/currency_to_option_euro"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/currency_option_euro_text" />
+
+            <RadioButton
+                android:id="@+id/currency_to_option_yen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/currency_option_yen_text" />
+        </RadioGroup>
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/currency_round_up"
+            android:layout_width="150dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:checked="true"
+            android:text="@string/currency_round_up_text"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/currency_to_options"/>
+
+        <TextView
+            android:id="@+id/currency_result"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:text="@string/currency_result_text"
+            tools:text="Количество: $0"
+            app:layout_constraintEnd_toEndOf="@id/currency_round_up"
+            app:layout_constraintStart_toStartOf="@id/currency_round_up"
+            app:layout_constraintTop_toBottomOf="@id/currency_round_up" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>
