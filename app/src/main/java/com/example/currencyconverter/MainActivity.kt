@@ -1,16 +1,68 @@
 package com.example.currencyconverter
 
+import android.annotation.SuppressLint
+import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.RadioButton
 import com.example.currencyconverter.databinding.ActivityMainBinding
 
 /**
+ * note:
+ *  ? - проверить, работает ли
+ *
+ *  реализовать конвертер валют с обменными курсами каждой валюты к каждой:
+ *      1 dollar = 56,56r
+ *      114 yen = 1 dollar (без главной валюты)
+ *
  * TODO:
- *  1. Сделать так, чтобы дубликаты с обеих сторон игнорились, ведь и там, и там могут быть два разных radioButton выбрано
- *  2. Сделать так, чтобы выбранный дубликат, если справа тоже, что и слева, то тот, который был последним выбранным, автоматом перешел на предыдущий radioButton
+ *  UI
+ *  1. [x] при выборе option, цвет текста дубликата только меняет цвет на серый, но также активный
+ *      1.2 [x] настроить адаптивные цвета для светлой и темной тем
+ *       - светлая тема:
+ *        обычный: черный текст
+ *        дубликат: gray
+ *       - темная тема:
+ *        обычный: белый текст
+ *        дубликат: фиолетовый (colorPrimaryVariant)
+ *      1.3 [ ] цвет дубликата в темной теме сделать чуть посветлее
+ *  2. [x] элементы от options опустить на +-10dp для сообщения об ошибки для пункта 3
+ *  3. [ ] дубликаты при запуске приложения должны быть подсвечены с самого начала
+ *  4. [ ] добавить textView, на котором будут отображаться сообщения об ошибке (может быть, и другие сообщения?)
+ *  5. [ ] если выбраны дубликаты, то при кнопке "перевести" дубликаты подсвечиваются красным и пишется снизу, от options,
+ *         красным цветом ошибка (просто смена цвета текста и его добавление)
+ *  6. [ ] при клике "перевести", клавиатура должна скрываться (подсказка в wiki)
+ *  BusinessLogic
+ *  7. [ ] создать классы для валют, в которых будет храниться курс валюты к главной валюте
+ *      7.1 [ ] создать главную валюту, где будут храниться курс этой валюты к каждой хранимой валюте
+ *  8. [ ] реализовать логику конвертации из одной валюты в другую
+ *      - если валюта "из" != dollar, то кол-во валюты "из" умножается на курс валюты к доллару:
+ *        34 йены * 0,0072453 (курс йены к доллару)
+ *      - если валюта "из" == dollar, то кол-во долларов "из" умножается на курс доллара к валюте:
+ *        34 dollars * 138,02 yen (курс доллара к йен)
+ *
+ *
+ * TODO:
+ *  РЕФАКТОРИНГ
+ *  1. [ ] Заменить тип свойства, хранящие текущий и предыдущий id option на RadioButton!!!!
+ *  2. [ ] Подумать над тем, как отрефакторить displayAmount и подобные ему
+ *         Чтобы отображаемый символ не в методе хранился, а в классе.
+ *         Или выводимый "to_dollar" и прочее хранится в классе (вынести сущности в отдельные классы)
+ *  ЗАПИСЬ В WIKI
+ *  1. [ ] Записать про SupressLint и attrs/themes и использование кода, чтобы получить кастомный цвет из themes
  */
 class MainActivity : AppCompatActivity() {
 
+    /**
+     * Константы для lastCheckedOptions, чтобы хранить, что последним было выбрано
+     * Будет использоваться для того, чтобы возвращать disabled кнопку в предыдущее положение,
+     * но с противоположной стороны, где был выбран option.
+     *
+     * Пример:
+     *  в toOptions выбрана 2 radioButton по-умолчанию
+     *
+     *  [Возможно, в этом нет необходимости, в этой функциональности]
+     */
     private val FROM_OPTIONS = "currencyFromOptions"
     private val TO_OPTIONS = "currencyToOptions"
 
@@ -24,11 +76,17 @@ class MainActivity : AppCompatActivity() {
     private var previousOptionFromOptions: Int = -1
 
     /**
+     * хранит дефолтный цвет текста для options
+     */
+    private var lastOptionTextColor: Int = -1
+
+    /**
      * Свойства, в которых хранятся текущий выбранный checkedButton у currencyToOptions
      * и предыдущий выбранный айдишник
      */
     private var currentOptionToOptions: Int = -1
     private var previousOptionToOptions: Int = -1
+
 
     /**
      * приватная переменная, в которой будет обьект привязки для activity_main.xml
@@ -39,6 +97,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         // инициализация обьекта привязки
         binding = ActivityMainBinding.inflate(layoutInflater)
+        // для main activity cтавится layout от корня обьетка привязки, со всеми ветвлениями
         setContentView(binding.root)
 
         // при запуске сразу отображает "Количество: $0.0"
@@ -64,16 +123,16 @@ class MainActivity : AppCompatActivity() {
                     previousOptionFromOptions = currentOptionFromOptions
                     currentOptionFromOptions = optionId
                 }
-                // проверяю, дубликаты выбраны
-                var isDublicated = checkDublicateCheckedRadiobutton()
 
-                var ignoreOption = getUncheckDublicateRadioButton()
+                // получение option, который должен быть подсвечен серым (с противоположной стороны)
+                val ignoreOption = getUncheckDublicateFromOptions()
 
-                checkAllRadiobuttons(ignoreOption)
+                // сделать ignoreOption с серым текстом
+                checkToOptions(ignoreOption)
             }
         }
 
-        // В зависимости от того, какая radiobutton в toOptions выбрана, валюта перед кол-во будет отображаться
+        // обработка выбора toOptions
         binding.currencyToOptions.setOnCheckedChangeListener { radioGroup, optionId ->
             run {
                 // ставлю, что был изменен toOptions последним
@@ -89,17 +148,41 @@ class MainActivity : AppCompatActivity() {
                     previousOptionToOptions = currentOptionToOptions
                     currentOptionToOptions = optionId
                 }
-                // проверяю, дубликаты выбраны
-                var isDublicated = checkDublicateCheckedRadiobutton()
 
+                // изменяет знак валюты на выбранный toOptions с кол-во 0.0
+                displayAmount(0.0, currentOptionToOptions)
 
-                var ignoreOption = getUncheckDublicateRadioButton()
+                // получение option, который нужно игнорировать (с противоположной стороны)
+                val ignoreOption = getUncheckDublicateToOptions()
 
-                checkAllRadiobuttons(ignoreOption)
-
-                displayAmount(0.0, optionId)
+                // игнорирование этого option
+                checkFromOptions(ignoreOption)
             }
         }
+    }
+
+    /**
+     * @param option - тот самый radioButton, цвет текст которого поменяется на color
+     * @param color - цвет, на который поменяет цвет текста option
+     *
+     * меняет цвет текста option на color
+     */
+    @SuppressLint("ResourceAsColor")
+    private fun changeOptionTextColor(option: RadioButton, color: Int) {
+        option.setTextColor(color)
+    }
+
+    /**
+     * @param option - тот самый radioButton, цвет текста которого поменяется на красный
+     *
+     * меняет цвет текста на красный - цвет ошибки
+     */
+    @SuppressLint("ResourceAsColor")
+    private fun changeOptionTextColorError(option: RadioButton) {
+
+        val colorRed = getColorTheme(3)
+
+        option.setTextColor(colorRed)
     }
 
     /**
@@ -118,7 +201,7 @@ class MainActivity : AppCompatActivity() {
             else -> "₽"
         }
 
-        // оставляет 2 числа после запятой у amount. Возвращает стркоу
+        // оставляет 2 числа после запятой у amount. Возвращает строку
         val formattedAmount = "${currencySymbol}%.2f".format(amount)
         binding.currencyResult.text = getString(R.string.currency_result_text, formattedAmount)
     }
@@ -151,34 +234,25 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * summary:
-     *  возращает дубликат option, который нужно будет игнорировать
+     *  возращает дубликат option из toOptions, который нужно будет игнорировать
      *
-     * @return ignoreOption: String - тот самый дубликат option, который нужно игнорировать
+     * @return ignoreOption: String - тот самый дубликат option для toOptions, который нужно игнорировать
      */
-    private fun getUncheckDublicateRadioButton(): String {
+    private fun getUncheckDublicateToOptions(): String {
 
         var ignoreOption = ""
 
-        if (lastCheckedOptions == FROM_OPTIONS) {
-
-            if (currentOptionFromOptions == R.id.currency_from_option_dollar) {
-                ignoreOption = "to_dollar"
-            } else if (currentOptionFromOptions == R.id.currency_from_option_euro) {
-                ignoreOption = "to_euro"
-            } else if (currentOptionFromOptions == R.id.currency_from_option_ruble) {
-                ignoreOption = "to_ruble"
-            } else if (currentOptionFromOptions == R.id.currency_from_option_yen) {
-                ignoreOption = "to_yen"
-            }
-        } else if (lastCheckedOptions == TO_OPTIONS) {
-
-            if (currentOptionToOptions == R.id.currency_to_option_dollar) {
+        when (currentOptionToOptions) {
+            R.id.currency_to_option_dollar -> {
                 ignoreOption = "from_dollar"
-            } else if (currentOptionToOptions == R.id.currency_to_option_euro) {
+            }
+            R.id.currency_to_option_euro -> {
                 ignoreOption = "from_euro"
-            } else if (currentOptionToOptions == R.id.currency_to_option_ruble) {
+            }
+            R.id.currency_to_option_ruble -> {
                 ignoreOption = "from_ruble"
-            } else if (currentOptionToOptions == R.id.currency_to_option_yen) {
+            }
+            R.id.currency_to_option_yen -> {
                 ignoreOption = "from_yen"
             }
         }
@@ -188,31 +262,113 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * summary:
-     *  все кнопки делает активными, кроме одной кнопки, которая является дубликатом
+     *  возращает дубликат option из fromOptions, который нужно будет игнорировать
+     *
+     * @return ignoreOption: String - тот самый дубликат option для fromOptions, который нужно игнорировать
+     */
+    private fun getUncheckDublicateFromOptions(): String {
+
+        var ignoreOption = ""
+
+        when (currentOptionFromOptions) {
+
+            R.id.currency_from_option_dollar -> {
+                ignoreOption = "to_dollar"
+            }
+            R.id.currency_from_option_euro -> {
+                ignoreOption = "to_euro"
+            }
+            R.id.currency_from_option_ruble -> {
+                ignoreOption = "to_ruble"
+            }
+            R.id.currency_from_option_yen -> {
+                ignoreOption = "to_yen"
+            }
+        }
+
+        return ignoreOption
+    }
+
+    /**
+     * summary:
+     *  все кнопки toOptions делает активными, кроме одной кнопки, которая является дубликатом
      *
      * @param optionToIgnore - есть дубликат, который нужно игнорировать
      */
-    private fun checkAllRadiobuttons(optionToIgnore: String) {
-        binding.currencyToOptionDollar.isEnabled = true
-        binding.currencyToOptionEuro.isEnabled = true
-        binding.currencyToOptionRuble.isEnabled = true
-        binding.currencyToOptionYen.isEnabled = true
+    private fun checkToOptions(optionToIgnore: String) {
 
-        binding.currencyFromOptionDollar.isEnabled = true
-        binding.currencyFromOptionEuro.isEnabled = true
-        binding.currencyFromOptionRuble.isEnabled = true
-        binding.currencyFromOptionYen.isEnabled = true
+        val colorOnSurface = getColorTheme(1)
+        val colorDublicate = getColorTheme(2)
+
+        changeOptionTextColor(binding.currencyToOptionDollar, colorOnSurface)
+        changeOptionTextColor(binding.currencyToOptionEuro, colorOnSurface)
+        changeOptionTextColor(binding.currencyToOptionRuble, colorOnSurface)
+        changeOptionTextColor(binding.currencyToOptionYen, colorOnSurface)
 
         when (optionToIgnore) {
-            "to_dollar" -> binding.currencyToOptionDollar.isEnabled = false
-            "to_euro" -> binding.currencyToOptionEuro.isEnabled = false
-            "to_ruble" -> binding.currencyToOptionRuble.isEnabled = false
-            "to_yen" -> binding.currencyToOptionYen.isEnabled = false
-
-            "from_dollar" -> binding.currencyFromOptionDollar.isEnabled = false
-            "from_euro" -> binding.currencyFromOptionEuro.isEnabled = false
-            "from_ruble" -> binding.currencyFromOptionRuble.isEnabled = false
-            "from_yen" -> binding.currencyFromOptionYen.isEnabled = false
+            "to_dollar" -> changeOptionTextColor(binding.currencyToOptionDollar, colorDublicate)
+            "to_euro" -> changeOptionTextColor(binding.currencyToOptionEuro, colorDublicate)
+            "to_ruble" -> changeOptionTextColor(binding.currencyToOptionRuble, colorDublicate)
+            "to_yen" -> changeOptionTextColor(binding.currencyToOptionYen, colorDublicate)
         }
+    }
+
+    /**
+     * TODO:
+     *  [ ] Попробовать сократить на рефакторинге
+     *
+     * summary:
+     *  все кнопки fromOptions делает активными, кроме одной кнопки, которая является дубликатом
+     *
+     * @param optionToIgnore - есть дубликат, который нужно игнорировать
+     */
+    private fun checkFromOptions(optionToIgnore: String) {
+
+        val colorOnSurface = getColorTheme(1)
+        val colorDublicate = getColorTheme(2)
+
+        changeOptionTextColor(binding.currencyFromOptionDollar, colorOnSurface)
+        changeOptionTextColor(binding.currencyFromOptionEuro, colorOnSurface)
+        changeOptionTextColor(binding.currencyFromOptionRuble, colorOnSurface)
+        changeOptionTextColor(binding.currencyFromOptionYen, colorOnSurface)
+
+        when (optionToIgnore) {
+            "from_dollar" -> changeOptionTextColor(binding.currencyFromOptionDollar, colorDublicate)
+            "from_euro" -> changeOptionTextColor(binding.currencyFromOptionEuro, colorDublicate)
+            "from_ruble" -> changeOptionTextColor(binding.currencyFromOptionRuble, colorDublicate)
+            "from_yen" -> changeOptionTextColor(binding.currencyFromOptionYen, colorDublicate)
+        }
+    }
+
+    /**
+     * summary:
+     *  Возвращает указанный цвет текста текущей темы
+     *
+     *  @param colorType - какой цвет я должен получить. 1 -> colorOnSurface, 2 -> colorDublicate, 3 -> colorError
+     *
+     *  @return color - цвет в виде resource id
+     */
+    @SuppressLint("ResourceAsColor")
+    private fun getColorTheme(colorType: Int): Int {
+
+        var color: Int = -1
+
+        // получение цвета темы colorOnSurface
+        val typedArray = theme.obtainStyledAttributes(R.styleable.ViewStyle)
+
+
+        when (colorType) {
+            1 -> {
+                color = typedArray.getColor(R.styleable.ViewStyle_colorOnSurface, Color.BLACK)
+            }
+            2 -> {
+                color = typedArray.getColor(R.styleable.ViewStyle_colorDublicate, R.color.gray)
+            }
+            3 -> {
+                color = typedArray.getColor(R.styleable.ViewStyle_colorError, Color.RED)
+            }
+        }
+
+        return color
     }
 }
