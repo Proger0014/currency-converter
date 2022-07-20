@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Конвертер Валют</string>
 
-    <string name="currency_from_text">От</string>
+    <string name="currency_from_text">Из</string>
     <string name="currency_to_text">В</string>
 
     <string name="currency_option_ruble_text">Рубль</string>

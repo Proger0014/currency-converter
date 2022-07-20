@@ -11,6 +11,7 @@ import com.example.currencyconverter.databinding.ActivityMainBinding
  * note:
  *  ? - проверить, работает ли
  *
+ *  [ПОТОМ]
  *  реализовать конвертер валют с обменными курсами каждой валюты к каждой:
  *      1 dollar = 56,56r
  *      114 yen = 1 dollar (без главной валюты)
@@ -25,13 +26,17 @@ import com.example.currencyconverter.databinding.ActivityMainBinding
  *       - темная тема:
  *        обычный: белый текст
  *        дубликат: фиолетовый (colorPrimaryVariant)
- *      1.3 [ ] цвет дубликата в темной теме сделать чуть посветлее
+ *      1.3 [x] цвет дубликата в темной теме сделать чуть посветлее
  *  2. [x] элементы от options опустить на +-10dp для сообщения об ошибки для пункта 3
- *  3. [ ] дубликаты при запуске приложения должны быть подсвечены с самого начала
- *  4. [ ] добавить textView, на котором будут отображаться сообщения об ошибке (может быть, и другие сообщения?)
- *  5. [ ] если выбраны дубликаты, то при кнопке "перевести" дубликаты подсвечиваются красным и пишется снизу, от options,
+ *  3. [x] дубликаты при запуске приложения должны быть подсвечены с самого начала
+ *  4. [x] изменить "От" на "Из"
+ *  5. [x] добавить смену иконки в editText валюты, которую я указываю в fromOption
+ *  6. [ ] добавить textView, на котором будут отображаться сообщения об ошибке (может быть, и другие сообщения?)
+ *  7. [ ] если выбраны дубликаты, то при кнопке "перевести" дубликаты подсвечиваются красным и пишется снизу, от options,
  *         красным цветом ошибка (просто смена цвета текста и его добавление)
- *  6. [ ] при клике "перевести", клавиатура должна скрываться (подсказка в wiki)
+ *  8. [ ] при клике "перевести"
+ *      8.1 [ ] клавиатура должна скрываться (подсказка в wiki)
+ *      8.2 [ ] запустить метод на editText.cearFocus()
  *  BusinessLogic
  *  7. [ ] создать классы для валют, в которых будет храниться курс валюты к главной валюте
  *      7.1 [ ] создать главную валюту, где будут храниться курс этой валюты к каждой хранимой валюте
@@ -48,6 +53,9 @@ import com.example.currencyconverter.databinding.ActivityMainBinding
  *  2. [ ] Подумать над тем, как отрефакторить displayAmount и подобные ему
  *         Чтобы отображаемый символ не в методе хранился, а в классе.
  *         Или выводимый "to_dollar" и прочее хранится в классе (вынести сущности в отдельные классы)
+ *  3. [ ] Избавиться от дубликатов кода:
+ *         - подсветка дубликатов с самого начала можно вынести в отдельные методы для to и from options
+ *         - затем использользовать эти методы и в onCreate и в обработчиках смены option
  *  ЗАПИСЬ В WIKI
  *  1. [ ] Записать про SupressLint и attrs/themes и использование кода, чтобы получить кастомный цвет из themes
  */
@@ -107,6 +115,15 @@ class MainActivity : AppCompatActivity() {
         currentOptionToOptions = binding.currencyToOptions.checkedRadioButtonId
         currentOptionFromOptions = binding.currencyFromOptions.checkedRadioButtonId
 
+        // подсветка дубликатов с самого запуска приложения
+        val ignoreFromOption = getUncheckDublicateFromOptions()
+        checkToOptions(ignoreFromOption)
+        val ignoreToOption = getUncheckDublicateToOptions()
+        checkFromOptions(ignoreToOption)
+
+        // поставит icon в editText выбранной валюты fromOption с самого запукса
+        changeIconEditText()
+
         // обработчик смены checkedRadioButton внутри currencyFromOptions
         binding.currencyFromOptions.setOnCheckedChangeListener { radioGroup, optionId ->
             run {
@@ -123,6 +140,9 @@ class MainActivity : AppCompatActivity() {
                     previousOptionFromOptions = currentOptionFromOptions
                     currentOptionFromOptions = optionId
                 }
+
+                // изменение icon в editText от выбора fromOption (меняется символ валюты, от которой будет идти конвертация)
+                changeIconEditText()
 
                 // получение option, который должен быть подсвечен серым (с противоположной стороны)
                 val ignoreOption = getUncheckDublicateFromOptions()
@@ -204,6 +224,19 @@ class MainActivity : AppCompatActivity() {
         // оставляет 2 числа после запятой у amount. Возвращает строку
         val formattedAmount = "${currencySymbol}%.2f".format(amount)
         binding.currencyResult.text = getString(R.string.currency_result_text, formattedAmount)
+    }
+
+    private fun changeIconEditText() {
+        var icon: Int = -1
+
+        when (currentOptionFromOptions) {
+            binding.currencyFromOptionDollar.id -> icon = R.drawable.ic_dollar
+            binding.currencyFromOptionEuro.id -> icon = R.drawable.ic_euro
+            binding.currencyFromOptionRuble.id -> icon = R.drawable.ic_ruble
+            binding.currencyFromOptionYen.id -> icon = R.drawable.ic_yen
+        }
+
+        binding.currencyToConvert.setStartIconDrawable(icon)
     }
 
     /**

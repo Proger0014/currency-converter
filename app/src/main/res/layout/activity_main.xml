@@ -62,13 +62,14 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="30dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/currency_from_options"
-            android:hint="@string/currency_to_convert_text">
+            app:layout_constraintTop_toBottomOf="@id/currency_from_options">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="numberDecimal"
+                android:hint="@string/currency_to_convert_text"
+                android:textSize="12sp"
                 android:importantForAutofill="no" />
 
         </com.google.android.material.textfield.TextInputLayout>
