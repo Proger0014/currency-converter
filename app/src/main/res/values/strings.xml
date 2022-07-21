@@ -14,4 +14,6 @@
 
     <string name="currency_result_text">Количество: %s</string>
     <string name="currency_round_up_text">Округлить</string>
+
+    <string name="error_message_text">ОШИБКА: Выбраны 2 одинаковых дубликата: перевод из %1$s в %2$s невозможен</string>
 </resources>

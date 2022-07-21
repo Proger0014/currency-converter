@@ -5,6 +5,7 @@ import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.RadioButton
+import com.example.currencyconverter.DublicateOption.Companion.getDublicateOptionByName
 import com.example.currencyconverter.databinding.ActivityMainBinding
 
 /**
@@ -31,9 +32,11 @@ import com.example.currencyconverter.databinding.ActivityMainBinding
  *  3. [x] дубликаты при запуске приложения должны быть подсвечены с самого начала
  *  4. [x] изменить "От" на "Из"
  *  5. [x] добавить смену иконки в editText валюты, которую я указываю в fromOption
- *  6. [ ] добавить textView, на котором будут отображаться сообщения об ошибке (может быть, и другие сообщения?)
+ *  6. [x] добавить textView, на котором будут отображаться сообщения об ошибке (может быть, и другие сообщения?)
  *  7. [ ] если выбраны дубликаты, то при кнопке "перевести" дубликаты подсвечиваются красным и пишется снизу, от options,
- *         красным цветом ошибка (просто смена цвета текста и его добавление)
+ *         красным цветом ошибка (в textView, добавленном сверху (7 пункт))
+ *         7.1 [x] сделать появление ошибки с указанием причины, почему перевод невозможен
+ *         7.2 [ ] сделать так, чтобы текст дубликатов подсвечивлся красным, если они выбраны
  *  8. [ ] при клике "перевести"
  *      8.1 [ ] клавиатура должна скрываться (подсказка в wiki)
  *      8.2 [ ] запустить метод на editText.cearFocus()
@@ -95,6 +98,35 @@ class MainActivity : AppCompatActivity() {
     private var currentOptionToOptions: Int = -1
     private var previousOptionToOptions: Int = -1
 
+    /**
+     * Это константы имен, чтобы пользоваться ими, а не текстом и не ошибиться
+     * Для метода поиска DublicateOption
+     */
+    private val NAME_RUBLE = "рубль"
+    private val NAME_DOLLAR = "доллар"
+    private val NAME_EURO = "евро"
+    private val NAME_YEN = "йена"
+
+    // хранит имя текущего требуемого dublicateOption или же пустую строку, если не требуется
+    private var requestDublicateOptionName: String = ""
+
+    /**
+     * хранит константы текста, которые будут использоваться в сообщении об ошибке
+     *
+     * TODO:
+     *  [ ] Записать в wiki про muttable и immutableList (возможно, и не нужно. Гугл есть)
+     * ПОМЕТКА ДЛЯ WIKI:
+     *  List<T> - неизменямый список, то есть, потом добавлять нельзя в него ничего.
+     *  ImuttableList
+     *
+     *  MutableList<T> - изменяемый список.
+     *  Смотреть на Метаните
+     */
+    private val dublicateOptions: List<DublicateOption> = listOf(
+        DublicateOption(NAME_RUBLE, "рубля", "рубль"),
+        DublicateOption(NAME_DOLLAR, "доллара", "доллар"),
+        DublicateOption(NAME_EURO, "евро", "евро"),
+        DublicateOption(NAME_YEN, "йены", "йену"))
 
     /**
      * приватная переменная, в которой будет обьект привязки для activity_main.xml
@@ -178,6 +210,15 @@ class MainActivity : AppCompatActivity() {
                 // игнорирование этого option
                 checkFromOptions(ignoreOption)
             }
+        }
+
+        /**
+         * Описание:
+         *
+         */
+        binding.currencyToConvertButton.setOnClickListener {
+            // обрабатывает ошибку, если выбраны дубликаты
+            requestInstallErrorText()
         }
     }
 
@@ -266,6 +307,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Описание:
+     *  Устанавливает сообщение об ощибке, если выбраны дубликаты, иначе стирает текст из textView
+     */
+    private fun requestInstallErrorText() {
+
+        if (checkDublicateCheckedRadiobutton()) {
+            installDublicateOption()
+
+            val currentDublicateOptions = dublicateOptions.getDublicateOptionByName(requestDublicateOptionName)
+
+            binding.errorMessage.text = getString(R.string.error_message_text, currentDublicateOptions!!.FROM_OPTION, currentDublicateOptions!!.TO_OPTION)
+
+        } else {
+            requestDublicateOptionName = ""
+            binding.errorMessage.text = ""
+        }
+    }
+
+    /**
      * summary:
      *  возращает дубликат option из toOptions, который нужно будет игнорировать
      *
@@ -343,6 +403,20 @@ class MainActivity : AppCompatActivity() {
             "to_euro" -> changeOptionTextColor(binding.currencyToOptionEuro, colorDublicate)
             "to_ruble" -> changeOptionTextColor(binding.currencyToOptionRuble, colorDublicate)
             "to_yen" -> changeOptionTextColor(binding.currencyToOptionYen, colorDublicate)
+        }
+    }
+
+    /**
+     * Описание:
+     *  устанавливает имя для DublicateOption по toOptions.
+     *  УСЛОВИЕ: чтобы были выбраны дубликаты
+     */
+    private fun installDublicateOption() {
+        when (currentOptionToOptions) {
+            binding.currencyToOptionDollar.id -> requestDublicateOptionName = NAME_DOLLAR
+            binding.currencyToOptionRuble.id -> requestDublicateOptionName = NAME_RUBLE
+            binding.currencyToOptionEuro.id -> requestDublicateOptionName = NAME_EURO
+            binding.currencyToOptionYen.id -> requestDublicateOptionName = NAME_YEN
         }
     }
 
