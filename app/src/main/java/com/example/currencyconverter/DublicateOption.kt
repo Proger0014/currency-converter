@@ -26,6 +26,7 @@ class DublicateOption(private val name: String, fromOption: String, toOption: St
             for (i in this) {
                 if (i.name == name) {
                     result = i
+                    break
                 }
             }
 

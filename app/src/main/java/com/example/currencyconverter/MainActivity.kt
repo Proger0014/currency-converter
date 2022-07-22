@@ -1,9 +1,11 @@
 package com.example.currencyconverter
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
 import android.widget.RadioButton
 import com.example.currencyconverter.DublicateOption.Companion.getDublicateOptionByName
 import com.example.currencyconverter.databinding.ActivityMainBinding
@@ -33,17 +35,19 @@ import com.example.currencyconverter.databinding.ActivityMainBinding
  *  4. [x] изменить "От" на "Из"
  *  5. [x] добавить смену иконки в editText валюты, которую я указываю в fromOption
  *  6. [x] добавить textView, на котором будут отображаться сообщения об ошибке (может быть, и другие сообщения?)
- *  7. [ ] если выбраны дубликаты, то при кнопке "перевести" дубликаты подсвечиваются красным и пишется снизу, от options,
+ *  7. [x] если выбраны дубликаты, то при кнопке "перевести" дубликаты подсвечиваются красным и пишется снизу, от options,
  *         красным цветом ошибка (в textView, добавленном сверху (7 пункт))
  *         7.1 [x] сделать появление ошибки с указанием причины, почему перевод невозможен
- *         7.2 [ ] сделать так, чтобы текст дубликатов подсвечивлся красным, если они выбраны
- *  8. [ ] при клике "перевести"
- *      8.1 [ ] клавиатура должна скрываться (подсказка в wiki)
- *      8.2 [ ] запустить метод на editText.cearFocus()
+ *         7.2 [x] сделать так, чтобы текст дубликатов подсвечивлся красным, если они выбраны (после нажатия перевести)
+ *         7.3 [x] если появилась ошибка, то при выборе другого option ошибка должна исчезнуть
+ *                 и дубликаты должны перестать подсвечиваться красным
+ *  8. [x] при клике "перевести"
+ *      8.1 [x] клавиатура должна скрываться (подсказка в wiki)
+ *      8.2 [x] запустить метод на editText.clearFocus()
  *  BusinessLogic
- *  7. [ ] создать классы для валют, в которых будет храниться курс валюты к главной валюте
- *      7.1 [ ] создать главную валюту, где будут храниться курс этой валюты к каждой хранимой валюте
- *  8. [ ] реализовать логику конвертации из одной валюты в другую
+ *  9. [ ] создать классы для валют, в которых будет храниться курс валюты к главной валюте
+ *      9.1 [ ] создать главную валюту, где будут храниться курс этой валюты к каждой хранимой валюте
+ *  10. [ ] реализовать логику конвертации из одной валюты в другую
  *      - если валюта "из" != dollar, то кол-во валюты "из" умножается на курс валюты к доллару:
  *        34 йены * 0,0072453 (курс йены к доллару)
  *      - если валюта "из" == dollar, то кол-во долларов "из" умножается на курс доллара к валюте:
@@ -59,8 +63,11 @@ import com.example.currencyconverter.databinding.ActivityMainBinding
  *  3. [ ] Избавиться от дубликатов кода:
  *         - подсветка дубликатов с самого начала можно вынести в отдельные методы для to и from options
  *         - затем использользовать эти методы и в onCreate и в обработчиках смены option
+ *  4. [ ] Удалить лишний код
  *  ЗАПИСЬ В WIKI
  *  1. [ ] Записать про SupressLint и attrs/themes и использование кода, чтобы получить кастомный цвет из themes
+ *  2. [ ] Записать про скрытие клавиатуры, что view.WindowToken, view - это view,
+ *         от клика или еще чего по нему, будет скрываться клава
  */
 class MainActivity : AppCompatActivity() {
 
@@ -133,6 +140,7 @@ class MainActivity : AppCompatActivity() {
      */
     private lateinit var binding: ActivityMainBinding
 
+    @SuppressLint("ServiceCast")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // инициализация обьекта привязки
@@ -140,12 +148,12 @@ class MainActivity : AppCompatActivity() {
         // для main activity cтавится layout от корня обьетка привязки, со всеми ветвлениями
         setContentView(binding.root)
 
-        // при запуске сразу отображает "Количество: $0.0"
-        displayAmount(0.0, binding.currencyToOptions.checkedRadioButtonId)
-
         // инициализация полей выбранных options
         currentOptionToOptions = binding.currencyToOptions.checkedRadioButtonId
         currentOptionFromOptions = binding.currencyFromOptions.checkedRadioButtonId
+
+        // при запуске сразу отображает "Количество: $0.0"
+        displayAmount(0.0, currentOptionToOptions)
 
         // подсветка дубликатов с самого запуска приложения
         val ignoreFromOption = getUncheckDublicateFromOptions()
@@ -159,6 +167,10 @@ class MainActivity : AppCompatActivity() {
         // обработчик смены checkedRadioButton внутри currencyFromOptions
         binding.currencyFromOptions.setOnCheckedChangeListener { radioGroup, optionId ->
             run {
+
+                // проверяет, были ли в прошлый раз дубликаты
+                val isLastError = checkDublicateCheckedRadiobutton()
+
                 // ставлю, что был изменен fromOptions последним
                 lastCheckedOptions = FROM_OPTIONS
 
@@ -171,6 +183,15 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     previousOptionFromOptions = currentOptionFromOptions
                     currentOptionFromOptions = optionId
+                }
+
+                // обнуляет ошибку при дубликатах, если были выбраны
+                if (isLastError) {
+                    resetFromError()
+
+                    //  проверяет дубликат для toOption, так как он не проверяется здесь
+                    val ignoreToOption = getUncheckDublicateToOptions()
+                    checkFromOptions(ignoreToOption)
                 }
 
                 // изменение icon в editText от выбора fromOption (меняется символ валюты, от которой будет идти конвертация)
@@ -187,6 +208,9 @@ class MainActivity : AppCompatActivity() {
         // обработка выбора toOptions
         binding.currencyToOptions.setOnCheckedChangeListener { radioGroup, optionId ->
             run {
+                // проверяет, были ли в прошлый раз дубликаты
+                val isLastError = checkDublicateCheckedRadiobutton()
+
                 // ставлю, что был изменен toOptions последним
                 lastCheckedOptions = TO_OPTIONS
 
@@ -199,6 +223,15 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     previousOptionToOptions = currentOptionToOptions
                     currentOptionToOptions = optionId
+                }
+
+                // обнуляет ошибку при дубликатах, если были выбраны
+                if (isLastError) {
+                    resetFromError()
+
+                    //  проверяет дубликат для fromOption, так как он не проверяется здесь
+                    val ignoreFromOption = getUncheckDublicateFromOptions()
+                    checkToOptions(ignoreFromOption)
                 }
 
                 // изменяет знак валюты на выбранный toOptions с кол-во 0.0
@@ -214,12 +247,84 @@ class MainActivity : AppCompatActivity() {
 
         /**
          * Описание:
-         *
+         *  Обработка нажатия по кпноке "перевсти"
          */
         binding.currencyToConvertButton.setOnClickListener {
-            // обрабатывает ошибку, если выбраны дубликаты
-            requestInstallErrorText()
+
+            /**
+             * Описание:
+             *  обрабатывает ошибку, если выбраны дубликаты
+             *  Выводит сообщение об ошибке под options с причиной в виде dublicateOptions
+             */
+            if (checkDublicateCheckedRadiobutton()) {
+
+                // дуликаты подсвечиваются красным
+                changeOptionTextColorError()
+
+                // ставит в переменную выбранный name из констант NAME_{currency} в соответствии с toOption
+                installDublicateOption()
+
+                /**
+                 * получает в соответсии с текущим dublicateName dublicateOption,
+                 * который хранит строки из валюты в валюту для сообщения об ошибке
+                 */
+                val currentDublicateOption = dublicateOptions.getDublicateOptionByName(requestDublicateOptionName)
+
+                /**
+                 * устанавливает текст сообщения об ошибке с причинами, подставляя
+                 * fromCurrency и toCurrency текстовые константы из dublicateOption
+                 */
+                binding.errorMessage.text = getString(
+                    R.string.error_message_text,
+                    currentDublicateOption?.FROM_OPTION,
+                    currentDublicateOption?.TO_OPTION)
+            }
+
+            /**
+             * Скрывает клавиатуру и убирает фокус с editText при нажатии "перевести"
+             */
+            val inputMethodManager =
+                getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            inputMethodManager.hideSoftInputFromWindow(binding.currencyToConvertButton.windowToken, 0)
+            binding.currencyToConvert.clearFocus()
         }
+    }
+
+    /**
+     * Описание:
+     *  При ошибке нужно стирать его предупреждения, этот метод делает это
+     *  УСЛОВИЕ: Ошибка пропала
+     */
+    private fun resetFromError() {
+
+        /**
+         * Возвращает цвета предыдущих дубликатов в дефолтные цвета, при условии,
+         * что больше дубликаты не выбраны.
+         */
+        // хранится предыдущий option при паследнем выбранном option
+        var previousLastCheckedOption: Int = -1
+        // хранится айдишник не измененного option
+        var currentNotChangedOption: Int = -1
+        val defaultColor = getColorTheme(1)
+
+        // находится предыдудший дубликат option при изменении options и не измененного option
+        if (lastCheckedOptions == FROM_OPTIONS) {
+            previousLastCheckedOption = previousOptionFromOptions
+            currentNotChangedOption = currentOptionToOptions
+        } else {
+            previousLastCheckedOption = previousOptionToOptions
+            currentNotChangedOption = currentOptionFromOptions
+        }
+
+        // ставит дефолтные цваета этим option
+        changeOptionTextColor(findViewById(previousLastCheckedOption), defaultColor)
+        changeOptionTextColor(findViewById(currentNotChangedOption), defaultColor)
+
+        /**
+         * Обнуляет текст об ошибке и запрашиваемый dublicateOption
+         */
+        binding.errorMessage.text = ""
+        requestDublicateOptionName = ""
     }
 
     /**
@@ -234,16 +339,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * @param option - тот самый radioButton, цвет текста которого поменяется на красный
-     *
-     * меняет цвет текста на красный - цвет ошибки
+     * меняет цвет текста дубликатов option на красный - цвет ошибки
      */
     @SuppressLint("ResourceAsColor")
-    private fun changeOptionTextColorError(option: RadioButton) {
+    private fun changeOptionTextColorError() {
 
         val colorRed = getColorTheme(3)
 
-        option.setTextColor(colorRed)
+        findViewById<RadioButton>(currentOptionToOptions).setTextColor(colorRed)
+        findViewById<RadioButton>(currentOptionFromOptions).setTextColor(colorRed)
     }
 
     /**
@@ -259,7 +363,8 @@ class MainActivity : AppCompatActivity() {
             binding.currencyToOptionYen.id -> "¥"
             binding.currencyToOptionEuro.id -> "€"
             binding.currencyToOptionDollar.id -> "$"
-            else -> "₽"
+            binding.currencyToOptionRuble.id -> "₽"
+            else -> ""
         }
 
         // оставляет 2 числа после запятой у amount. Возвращает строку
@@ -292,37 +397,21 @@ class MainActivity : AppCompatActivity() {
 
         var isDublicate = false
 
-        if (currentOptionFromOptions == R.id.currency_from_option_dollar && currentOptionToOptions == R.id.currency_to_option_dollar) {
+        if (currentOptionFromOptions == R.id.currency_from_option_dollar &&
+            currentOptionToOptions == R.id.currency_to_option_dollar) {
             isDublicate = true
-        } else if (currentOptionFromOptions == R.id.currency_from_option_euro && currentOptionToOptions == R.id.currency_to_option_euro) {
+        } else if (currentOptionFromOptions == R.id.currency_from_option_euro &&
+            currentOptionToOptions == R.id.currency_to_option_euro) {
             isDublicate = true
-        } else if (currentOptionFromOptions == R.id.currency_from_option_ruble && currentOptionToOptions == R.id.currency_to_option_ruble) {
+        } else if (currentOptionFromOptions == R.id.currency_from_option_ruble &&
+            currentOptionToOptions == R.id.currency_to_option_ruble) {
             isDublicate = true
-        } else if (currentOptionFromOptions == R.id.currency_from_option_yen && currentOptionToOptions == R.id.currency_to_option_yen) {
+        } else if (currentOptionFromOptions == R.id.currency_from_option_yen &&
+            currentOptionToOptions == R.id.currency_to_option_yen) {
             isDublicate = true
         }
-
 
         return isDublicate
-    }
-
-    /**
-     * Описание:
-     *  Устанавливает сообщение об ощибке, если выбраны дубликаты, иначе стирает текст из textView
-     */
-    private fun requestInstallErrorText() {
-
-        if (checkDublicateCheckedRadiobutton()) {
-            installDublicateOption()
-
-            val currentDublicateOptions = dublicateOptions.getDublicateOptionByName(requestDublicateOptionName)
-
-            binding.errorMessage.text = getString(R.string.error_message_text, currentDublicateOptions!!.FROM_OPTION, currentDublicateOptions!!.TO_OPTION)
-
-        } else {
-            requestDublicateOptionName = ""
-            binding.errorMessage.text = ""
-        }
     }
 
     /**
